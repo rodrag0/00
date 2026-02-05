@@ -6,7 +6,6 @@ A lightweight, distraction-free web app to capture ideas and projects with:
 - Color tag
 - Description
 - Relationship/connection to another project
-- Edit existing ideas quickly
 - Feasibility score
 - Self-rating of difficulty
 - Priority
