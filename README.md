@@ -6,6 +6,7 @@ A lightweight, distraction-free web app to capture ideas and projects with:
 - Color tag
 - Description
 - Relationship/connection to another project
+- Edit existing ideas quickly
 - Feasibility score
 - Self-rating of difficulty
 - Priority
@@ -31,4 +32,9 @@ Then open `http://localhost:8000`.
 - Session cookies are HTTP-only.
 - Unknown preview paths now gracefully render the main app screen (helps hosted preview environments that proxy under custom URLs).
 
-- Relationship map panel highlights linked ideas so connections are visually obvious.
+- Relationship map includes a legend: green left strip + 'Depends on' badge means the idea is linked to another.
+- `GET /health` returns `ok` for simple uptime checks.
+
+## Updating / merge conflicts
+
+If you see merge conflicts while integrating this branch, prefer **Current Change** for `app.py` and `README.md` to keep the latest relationship legend + `Depends on` wording and edit flow.
