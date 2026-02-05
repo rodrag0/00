@@ -5,7 +5,7 @@ A lightweight, distraction-free web app to capture ideas and projects with:
 - Name
 - Color tag
 - Description
-- Relationship/connection to another project
+- Parent idea (to create child-idea trees)
 - Edit existing ideas quickly
 - Feasibility score
 - Self-rating of difficulty
@@ -32,9 +32,13 @@ Then open `http://localhost:8000`.
 - Session cookies are HTTP-only.
 - Unknown preview paths now gracefully render the main app screen (helps hosted preview environments that proxy under custom URLs).
 
-- Relationship map includes a legend: green left strip + 'Depends on' badge means the idea is linked to another.
+- Idea hierarchy panel shows Parent ideas and nested Child ideas; green strip + 'Parent idea' badge marks child cards.
 - `GET /health` returns `ok` for simple uptime checks.
 
 ## Updating / merge conflicts
 
-If you see merge conflicts while integrating this branch, prefer **Current Change** for `app.py` and `README.md` to keep the latest relationship legend + `Depends on` wording and edit flow.
+If you see merge conflicts while integrating this branch, prefer **Current Change** for `app.py` and `README.md` to keep the latest idea hierarchy + `Parent idea` wording and edit flow.
+
+## Codex PR note
+
+If you see: `Codex does not currently support updating PRs that are updated outside of Codex`, create a **new PR** from the current branch tip instead of trying to update the old PR.

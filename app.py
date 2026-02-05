@@ -163,24 +163,58 @@ def num_value(raw, default=5):
 
 def relationship_summary(ideas):
     by_id = {idea["id"]: idea for idea in ideas}
-    rows = []
+    children_by_parent = {}
+    roots = []
     linked = 0
+
     for idea in ideas:
-        if idea["related_idea_id"] and idea["related_idea_id"] in by_id:
+        parent_id = idea["related_idea_id"]
+        if parent_id and parent_id in by_id and parent_id != idea["id"]:
             linked += 1
-            parent = by_id[idea["related_idea_id"]]
-            rows.append(
-                f"<li><span class='swatch' style='background:{html.escape(idea['color'])}'></span><strong>{html.escape(idea['name'])}</strong> \u2192 <span>{html.escape(parent['name'])}</span></li>"
-            )
+            children_by_parent.setdefault(parent_id, []).append(idea)
+        else:
+            roots.append(idea)
 
-    if not rows:
-        relation_text = "No links yet. Connect ideas to reveal project lanes."
-        detail = "Start by relating one idea to another so priorities become clearer."
+    for parent_id, children in children_by_parent.items():
+        children.sort(key=lambda r: (-r["priority"], r["name"].lower()))
+
+    roots.sort(key=lambda r: (-r["priority"], r["name"].lower()))
+
+    def render_branch(node, depth=0, seen=None):
+        seen = set() if seen is None else seen
+        if node["id"] in seen:
+            return ""
+        seen = set(seen)
+        seen.add(node["id"])
+
+        role = "Parent idea" if depth == 0 else f"Child level {depth}"
+        item = (
+            f"<li class='tree-item depth-{min(depth,4)}'>"
+            f"<div class='tree-node'><span class='swatch' style='background:{html.escape(node['color'])}'></span>"
+            f"<strong>{html.escape(node['name'])}</strong><span class='tree-role'>{role}</span></div>"
+        )
+
+        children = children_by_parent.get(node["id"], [])
+        if children:
+            child_html = "".join(render_branch(child, depth + 1, seen) for child in children)
+            item += f"<ul class='tree-children'>{child_html}</ul>"
+
+        item += "</li>"
+        return item
+
+    tree_html = "".join(render_branch(root) for root in roots)
+
+    if not tree_html:
+        tree_html = "<li class='tree-item'><div class='tree-node'>No hierarchy yet.</div></li>"
+
+    if linked == 0:
+        relation_text = "No parent/child links yet."
+        detail = "Assign a Parent idea to build an idea tree."
     else:
-        relation_text = f"{linked} linked idea{'s' if linked != 1 else ''} out of {len(ideas)}"
-        detail = "Linked items show a green left strip and a 'Depends on' badge."
+        relation_text = f"{linked} linked child idea{'s' if linked != 1 else ''}."
+        detail = "Each card with the green strip is a child idea connected to a parent."
 
-    return relation_text, detail, "".join(rows) or "<li>No relationships created yet.</li>"
+    return relation_text, detail, tree_html
 
 
 def layout(title, body, username=None, flash=None):
@@ -240,8 +274,11 @@ textarea{{min-height:110px;resize:vertical;}}
 .legend-strip{{width:18px;height:10px;border-left:6px solid var(--accent);background:#eef6f3;border-radius:2px;display:inline-block;}}
 .rel-panel{{margin-bottom:14px;padding:14px;border:1px solid #d6e3df;background:#f2f8f6;border-radius:14px;}}
 .rel-panel h3{{margin:0 0 8px;font-size:1rem;}}
-.rel-list{{margin:8px 0 0 0;padding-left:18px;display:grid;gap:6px;}}
-.rel-list li{{color:#314740;}}
+.rel-list{{margin:10px 0 0 0;padding-left:0;display:grid;gap:6px;list-style:none;}}
+.tree-item{{margin:0;padding-left:0;}}
+.tree-node{{display:flex;align-items:center;gap:8px;color:#314740;background:#fff;border:1px solid #d6e3df;border-radius:10px;padding:6px 8px;}}
+.tree-role{{margin-left:auto;font-size:.72rem;color:#4c6a63;background:#eef6f3;border:1px solid #d2e4df;padding:2px 7px;border-radius:999px;}}
+.tree-children{{list-style:none;margin:6px 0 0 18px;padding-left:10px;border-left:2px solid #dce9e6;display:grid;gap:6px;}}
 .actions{{display:flex;gap:8px;margin-top:12px;}}
 .flash{{background:var(--accent-soft);border:1px solid #bdd5d0;padding:11px 12px;border-radius:12px;margin-bottom:14px;}}
 footer{{text-align:center;color:var(--muted);padding:18px;}}
@@ -311,7 +348,7 @@ def dashboard_page(user, flash="", edit_idea=None):
     form_title = "Edit idea" if edit_idea else "Quick capture"
     submit_text = "Save changes" if edit_idea else "Save idea"
 
-    option_rows = ["<option value=''>No relation</option>"]
+    option_rows = ["<option value=''>No parent (top-level idea)</option>"]
     editing_id = edit_idea["id"] if edit_idea else None
     for idea in ideas:
         if editing_id and idea["id"] == editing_id:
@@ -327,7 +364,7 @@ def dashboard_page(user, flash="", edit_idea=None):
     for idea in ideas:
         linked_class = " linked" if idea["related_idea_id"] else ""
         relation_badge = (
-            f"<div class='rel-badge'>Depends on: {html.escape(idea['related_name'])}</div>"
+            f"<div class='rel-badge'>Parent idea: {html.escape(idea['related_name'])}</div>"
             if idea["related_name"]
             else ""
         )
@@ -364,7 +401,7 @@ def dashboard_page(user, flash="", edit_idea=None):
           <p><label>Name</label><input name='name' required maxlength='120' value='{html.escape((edit_idea['name'] if edit_idea else ''))}'></p>
           <p><label>Color</label><input type='color' name='color' value='{html.escape((edit_idea['color'] if edit_idea else '#4c6a63'))}'></p>
           <p><label>Description</label><textarea name='description' required maxlength='1000'>{html.escape((edit_idea['description'] if edit_idea else ''))}</textarea></p>
-          <p><label>Relationship / connection</label>
+          <p><label>Parent idea</label>
             <select name='related_idea_id'>
               {''.join(option_rows)}
             </select>
@@ -381,10 +418,10 @@ def dashboard_page(user, flash="", edit_idea=None):
       <section class='card'>
         <h2>Ideas & projects</h2>
         <div class='rel-panel'>
-          <h3>Relationship map</h3>
+          <h3>Idea hierarchy</h3>
           <div><strong>{html.escape(relation_text)}</strong></div>
           <div style='color:#4e5d58;margin-top:3px;'>{html.escape(detail)}</div>
-          <div class='legend'><span class='legend-strip'></span><span>Green left strip means this idea depends on another idea.</span></div>
+          <div class='legend'><span class='legend-strip'></span><span>Green left strip means this is a child idea. Badge shows its parent idea.</span></div>
           <ul class='rel-list'>{relation_items}</ul>
         </div>
         <div class='projects'>{items}</div>
