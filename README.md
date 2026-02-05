@@ -29,3 +29,6 @@ Then open `http://localhost:8000`.
 - First-time startup shows account creation.
 - Data persists in `ideas.db`.
 - Session cookies are HTTP-only.
+- Unknown preview paths now gracefully render the main app screen (helps hosted preview environments that proxy under custom URLs).
+
+- Relationship map panel highlights linked ideas so connections are visually obvious.
