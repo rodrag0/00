@@ -178,7 +178,7 @@ def relationship_summary(ideas):
         detail = "Start by relating one idea to another so priorities become clearer."
     else:
         relation_text = f"{linked} linked idea{'s' if linked != 1 else ''} out of {len(ideas)}"
-        detail = "Linked items are highlighted in the board with a relationship strip."
+        detail = "Linked items show a green left strip and a 'Depends on' badge."
 
     return relation_text, detail, "".join(rows) or "<li>No relationships created yet.</li>"
 
@@ -232,10 +232,12 @@ textarea{{min-height:110px;resize:vertical;}}
 .row{{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}}
 .projects{{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;}}
 .project{{border:1px solid var(--line);border-radius:14px;padding:14px;background:white;position:relative;}}
-.project.linked{{border-left:6px solid var(--accent);padding-left:12px;}}
+.project.linked{{border-left:6px solid var(--accent);padding-left:12px;background:linear-gradient(90deg,#eef6f3 0,#ffffff 40%);}}
 .swatch{{width:14px;height:14px;border-radius:50%;display:inline-block;vertical-align:middle;margin-right:8px;border:1px solid #0002;}}
 .meta{{font-size:.85rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:9px;margin-top:10px;}}
 .rel-badge{{display:inline-block;background:#edf4f2;color:#325149;border:1px solid #c8dbd7;padding:5px 8px;border-radius:999px;font-size:.78rem;font-weight:600;margin-top:8px;}}
+.legend{{display:flex;align-items:center;gap:8px;margin-top:8px;color:#3f5a53;font-size:.85rem;}}
+.legend-strip{{width:18px;height:10px;border-left:6px solid var(--accent);background:#eef6f3;border-radius:2px;display:inline-block;}}
 .rel-panel{{margin-bottom:14px;padding:14px;border:1px solid #d6e3df;background:#f2f8f6;border-radius:14px;}}
 .rel-panel h3{{margin:0 0 8px;font-size:1rem;}}
 .rel-list{{margin:8px 0 0 0;padding-left:18px;display:grid;gap:6px;}}
@@ -325,7 +327,7 @@ def dashboard_page(user, flash="", edit_idea=None):
     for idea in ideas:
         linked_class = " linked" if idea["related_idea_id"] else ""
         relation_badge = (
-            f"<div class='rel-badge'>Connected to: {html.escape(idea['related_name'])}</div>"
+            f"<div class='rel-badge'>Depends on: {html.escape(idea['related_name'])}</div>"
             if idea["related_name"]
             else ""
         )
@@ -382,6 +384,7 @@ def dashboard_page(user, flash="", edit_idea=None):
           <h3>Relationship map</h3>
           <div><strong>{html.escape(relation_text)}</strong></div>
           <div style='color:#4e5d58;margin-top:3px;'>{html.escape(detail)}</div>
+          <div class='legend'><span class='legend-strip'></span><span>Green left strip means this idea depends on another idea.</span></div>
           <ul class='rel-list'>{relation_items}</ul>
         </div>
         <div class='projects'>{items}</div>
@@ -467,6 +470,10 @@ def app(environ, start_response):
             return [auth_page("Invalid credentials.").encode("utf-8")]
         headers = set_session_headers(row["id"])
         return redirect(start_response, "/", headers)
+
+    if path == "/health" and method == "GET":
+        start_response("200 OK", [("Content-Type", "text/plain; charset=utf-8")])
+        return [b"ok"]
 
     if path == "/logout" and method == "POST":
         headers = clear_session_headers(environ)
